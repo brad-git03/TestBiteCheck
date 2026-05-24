@@ -8,50 +8,48 @@ const {
 } = require('./db');
 const { verifySignature } = require('./eddsa');
 const crypto = require('crypto');
-// Nodemailer Configuration
-const nodemailer = require('nodemailer');
-const SENDER_EMAIL = process.env.EMAIL_USER;
-const SENDER_PASS = process.env.EMAIL_PASS;
-
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    family: 4, // Force IPv4 to bypass Render IPv6 routing issues
-    auth: {
-        user: SENDER_EMAIL,
-        pass: SENDER_PASS
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
-});
+// Brevo HTTP API Configuration (Bypasses Render SMTP Block)
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const SENDER_EMAIL = process.env.EMAIL_USER; // Your verified Gmail address
 
 const sendEmail = async (toEmail, subject, textContent, htmlContent = null, attachmentBuffer = null, attachmentName = null) => {
-    if (!SENDER_EMAIL || !SENDER_PASS) {
-        console.warn("EMAIL_USER or EMAIL_PASS is missing! Emails will not be sent.");
-        return { error: "Missing Email Credentials" };
+    if (!BREVO_API_KEY) {
+        console.warn("BREVO_API_KEY is missing! Emails will not be sent.");
+        return { error: "Missing API Key" };
     }
 
-    const mailOptions = {
-        from: `"UA Canteen Bot" <${SENDER_EMAIL}>`,
-        to: toEmail,
+    const payload = {
+        sender: { name: "UA Canteen Bot", email: SENDER_EMAIL },
+        to: [{ email: toEmail }],
         subject: subject,
-        text: textContent
+        textContent: textContent,
     };
 
-    if (htmlContent) mailOptions.html = htmlContent;
-
+    if (htmlContent) payload.htmlContent = htmlContent;
+    
     if (attachmentBuffer && attachmentName) {
-        mailOptions.attachments = [{
-            filename: attachmentName,
-            content: attachmentBuffer
+        payload.attachment = [{
+            name: attachmentName,
+            content: attachmentBuffer.toString('base64')
         }];
     }
 
     try {
-        const info = await transporter.sendMail(mailOptions);
-        return { data: info };
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'accept': 'application/json',
+                'api-key': BREVO_API_KEY,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            return { error: errorData };
+        }
+        return { data: await response.json() };
     } catch (err) {
         return { error: err.message };
     }

@@ -14,10 +14,16 @@ const SENDER_EMAIL = process.env.EMAIL_USER;
 const SENDER_PASS = process.env.EMAIL_PASS;
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    family: 4, // Force IPv4 to bypass Render IPv6 routing issues
     auth: {
         user: SENDER_EMAIL,
         pass: SENDER_PASS
+    },
+    tls: {
+        rejectUnauthorized: false
     }
 });
 

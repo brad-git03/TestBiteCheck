@@ -9,8 +9,8 @@ const app = express();
 
 // Set up CORS - Strictly allow only your frontend URLs
 const allowedOrigins = [
-    'http://localhost:3000', 
-    'https://ua-canteen-evaluation.vercel.app' 
+    'http://localhost:3000',
+    'https://test-bite-check.vercel.app'
 ];
 if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL);
 
